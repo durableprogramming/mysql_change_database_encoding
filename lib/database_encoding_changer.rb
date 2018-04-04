@@ -145,7 +145,7 @@ class DatabaseEncodingChanger
     end
   end
   def table_list
-    ActiveRecord::Base.connection.tables
+    conn.execute("SELECT table_name FROM information_schema.tables where table_type = 'BASE TABLE' AND table_schema=#{conn.quote(@options[:database])};").to_a.flatten
   end
 
   def conn
