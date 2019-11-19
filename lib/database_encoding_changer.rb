@@ -111,6 +111,7 @@ class DatabaseEncodingChanger
     cmd << Shellwords.escape(sql) 
     cmd << ' '
     cmd << Shellwords.escape(pt_dsn(table))
+    puts cmd
     system cmd
 
     
