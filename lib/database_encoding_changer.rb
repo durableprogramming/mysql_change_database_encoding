@@ -146,7 +146,6 @@ class DatabaseEncodingChanger
   end
 
   def table_list
-<<<<<<< HEAD
     if @options[:overwrite]
       conn.execute("SELECT table_name FROM information_schema.tables WHERE
                     table_type = 'BASE TABLE'
@@ -159,9 +158,6 @@ class DatabaseEncodingChanger
                     AND table_collation <> #{conn.quote(@options[:collation])}
                     ;").to_a.flatten
     end
-=======
-    ActiveRecord::Base.connection.tables
->>>>>>> parent of c3b6208... change DatabaseEncodingChange#tables method to avoid trying to migrate views
   end
 
   def conn
