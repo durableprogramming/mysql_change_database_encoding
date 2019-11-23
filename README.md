@@ -27,6 +27,7 @@ Usage: mysql_change_database_encoding.rb [options]
         --[no-]direct-alter-table    If necessary, issue direct ALTER TABLE statements without OSC. This is use if pt_online_schema_change is not installed, if --no-osc is passed, or if a table does not have a primary key.
         --[no-]osc                   Enables online schema change using pt-online-schema-change. Defaults to true if pt-online-schema-change is installed.
         --osc-options [OPTIONS]      Sets optional parameters for pt-online-schema-change, which are passed on as-is.
+    -o, --overwrite                  Optional parameter to overwrite the collation even if it is already migrated.
         --[no-]skip-table-on-error   If a SQL error, continue to next table; if not set, quit on SQL errors. Defaults to false. 
     -v, --verbose                    Run with more output.
 ```

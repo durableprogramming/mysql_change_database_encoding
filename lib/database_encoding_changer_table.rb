@@ -14,7 +14,7 @@ class DatabaseEncodingChangerTable < ActiveRecord::Base
     # If a table lacks a primary key, pt-online-schema-change will not be able to 
     # modify the table.
 
-    if self.primary_key.nil?
+    if self.primary_key.nil? and (connection.schema_cache.primary_keys(table_name).nil? or connection.schema_cache.primary_keys(table_name).empty?)
       false
     else
       true

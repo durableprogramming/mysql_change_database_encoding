@@ -15,6 +15,7 @@ module McdeOptionsParser
     options[:osc]                 = true
     options[:osc_options]         = ''
     options[:skip_table_on_error] = false
+    options[:overwrite]           = false
 
     options[:pt_online_schema_change_path] = File.which("pt-online-schema-change") 
 
@@ -61,6 +62,10 @@ module McdeOptionsParser
         end
         opts.on("--osc-options [OPTIONS]", "Sets optional parameters for pt-online-schema-change, which are passed on as-is.") do |_|
           options[:osc_options] = _
+        end
+
+        opts.on("-o", "--overwrite" ,"Optional parameter to overwrite the collation even if it is already migrated.") do |_|
+          options[:overwrite] = _
         end
 
         opts.on("--[no-]skip-table-on-error", "If a SQL error, continue to next table; if not set, quit on SQL errors. Defaults to false. ") do |_|
