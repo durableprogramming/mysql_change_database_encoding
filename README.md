@@ -4,12 +4,9 @@ Tool for changing a database's encoding, collation, or both. Supports online sch
 
 # Installation
 
-RVM is required; you can install rvm via directions at http://rvm.io/.
-
-Once RVM is installed, you can install the appropriate Ruby and it's various dependencies as follows:
+A working Ruby install is required; use of rbenv or RVM is recommended, but not required. To use, clone this git repo and then install dependencies:
 
 ```
-rvm use --install . 
 bundle install
 ```
 
