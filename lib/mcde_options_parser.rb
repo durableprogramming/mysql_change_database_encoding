@@ -17,7 +17,7 @@ module McdeOptionsParser
     options[:skip_table_on_error] = false
     options[:overwrite]           = false
 
-    options[:pt_online_schema_change_path] = File.which("pt-online-schema-change") 
+    options[:pt_online_schema_change_path] = `which pt-online-schema-change`.strip
 
     OptionParser.new do |opts|
         opts.banner = "Usage: #{$0} [options]"
@@ -84,13 +84,11 @@ module McdeOptionsParser
     end
 
     if !options[:encoding] && !options[:collation]
-      puts 'ERROR: One of ENCODING or COLLATION must be specified. Hint: try "--encoding utf8mb4".'
-      exit
+      raise 'ERROR: One of ENCODING or COLLATION must be specified. Hint: try "--encoding utf8mb4".'
     end
 
     if !(options[:direct_alter_table] || options[:osc])
-      puts "ERROR: Either --direct_alter_table or --osc must be enabled."
-      exit
+      raise "ERROR: Either --direct_alter_table or --osc must be enabled."
     end
     options
   end

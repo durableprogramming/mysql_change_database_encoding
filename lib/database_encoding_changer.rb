@@ -1,10 +1,14 @@
 # Copyright 2018, David Berube. All rights reserved.
 # See LICENSE for license details.
 
+require 'active_record'
+require_relative './database_encoding_changer_table'
+
 class DatabaseEncodingChanger
 
   def initialize(opts)
     @conn = opts.delete(:connection)
+
     @options = opts
   end
 
@@ -12,6 +16,7 @@ class DatabaseEncodingChanger
     puts "Processing database settings."
     sql = "ALTER DATABASE "
     sql << conn.quote_column_name(@options[:database])
+
     if @options[:encoding] 
       sql << " CHARACTER SET #{@options[:encoding]}"
     end
@@ -162,7 +167,7 @@ class DatabaseEncodingChanger
   end
 
   def conn
-    ActiveRecord::Base.connection
+    @conn ||= ActiveRecord::Base.connection
   end
 
 end
