@@ -7,6 +7,8 @@ Tool for changing a database's encoding, collation, or both. Supports online sch
 A working Ruby install is required; use of rbenv or RVM is recommended, but not required. To use, clone this git repo and then install dependencies:
 
 ```
+git clone https://github.com/durableprogramming/mysql_change_database_encoding.git
+cd mysql_change_database_encoding
 bundle install
 ```
 
