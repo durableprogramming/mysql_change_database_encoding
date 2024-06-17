@@ -34,6 +34,7 @@ class TestDatabaseEncodingChangerTable < Minitest::Test
       end
     end
 
+    DatabaseEncodingChangerTable.table_name = 'test_2' # reload schema info
     DatabaseEncodingChangerTable.table_name = 'test_1' # reload schema info
 
     assert_equal false, @table.eligible_for_online_schema_change?
