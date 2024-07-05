@@ -69,4 +69,4 @@ Commercial support for this tool is available from Durable Programming, LLC. You
 
 Copyright 2024, Durable Programming LLC. All rights reserved.
 
-Distributed under the GNU GPL version 3.0 license; you can read the full text of the license in the LICENSE.md file.
+Distributed under the GNU GPL version 3.0 license; you can read the full text of the license in the [LICENSE](LICENSE) file.
