@@ -29,12 +29,17 @@ class TestDatabaseEncodingChangerTable < Minitest::Test
   def test_eligible_for_online_schema_change_without_primary_key
 
     ActiveRecord::Schema.define do
+
       create_table 'test_2', id: false do |t|
         t.text "test"
       end
     end
 
     DatabaseEncodingChangerTable.table_name = 'test_2' # reload schema info
+    DatabaseEncodingChangerTable.reset_column_information
+
+    assert !(DatabaseEncodingChangerTable.columns.to_a.map(&:name).include?('id'))
+
 
     assert_equal false, @table.eligible_for_online_schema_change?
   end
