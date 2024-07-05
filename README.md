@@ -61,3 +61,12 @@ However, if you don't have `pt_online_schema_change` installed, or do not want t
 MYSQL_PASSWORD=this_is_a_secure_password MYSQL_DATABASE=big_database_full_of_legacy_tables ruby mysql_change_database_encoding.rb --collation utf8mb4_unicode_ci --encoding utf8mb4 --direct --no-osc
 ```
 
+# Commercial Support
+
+Commercial support for this tool is available from Durable Programming, LLC. You can find out more at [durableprogramming.com](https://durableprogramming.com/) or via email at [commercial@durableprogramming.com](mailto:commercial@durableprogramming.com).
+
+# Copyright
+
+Copyright 2024, Durable Programming LLC. All rights reserved.
+
+Distributed under the GNU GPL version 3.0 license; you can read the full text of the license in the LICENSE.md file.
