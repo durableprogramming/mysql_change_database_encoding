@@ -1,4 +1,4 @@
-# Copyright 2018, David Berube. All rights reserved.
+# Copyright 2024, Durable Programming, LLC. All rights reserved.
 # See LICENSE for license details.
 
 source 'https://rubygems.org'
