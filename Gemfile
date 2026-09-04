@@ -1,11 +1,16 @@
-# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# Copyright 2026, Durable Programming, LLC. All rights reserved.
 # See LICENSE for license details.
 
-source 'https://rubygems.org'
-gem 'mysql2'
-gem 'activerecord'
-gem 'ptools'
-gem 'pry'
+source "https://rubygems.org"
 
-gem 'minitest-reporters'
-gem 'sqlite3'
+gemspec
+
+group :development, :test do
+  gem "minitest", "~> 5.0"
+  gem "minitest-reporters"
+  gem "pry"
+  gem "rake"
+  gem "rubocop"
+  gem "simplecov"
+  gem "sqlite3"
+end
