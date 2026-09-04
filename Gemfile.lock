@@ -32,7 +32,7 @@ GEM
       concurrent-ruby (~> 1.0)
     logger (1.7.0)
     method_source (1.0.0)
-    mini_portile2 (2.8.4)
+    mini_portile2 (2.8.9)
     minitest (5.27.0)
     minitest-reporters (1.6.1)
       ansi
@@ -46,7 +46,7 @@ GEM
     ptools (1.5.0)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
-    sqlite3 (1.6.3)
+    sqlite3 (2.9.5)
       mini_portile2 (~> 2.8.0)
     timeout (0.4.3)
     tzinfo (2.0.6)
