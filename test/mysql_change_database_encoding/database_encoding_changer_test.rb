@@ -1,5 +1,4 @@
-require_relative './test_helper'
-require_relative '../lib/database_encoding_changer'
+require "test_helper"
 
 class DatabaseEncodingChangerTest < Minitest::Test
   def setup
@@ -14,7 +13,7 @@ class DatabaseEncodingChangerTest < Minitest::Test
       verbose: true,
       overwrite: false
     }
-    @changer = DatabaseEncodingChanger.new(connection: @connection, **@options)
+    @changer = MysqlChangeDatabaseEncoding::DatabaseEncodingChanger.new(connection: @connection, **@options)
   end
 
   def test_run

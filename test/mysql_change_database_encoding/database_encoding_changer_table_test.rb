@@ -1,7 +1,6 @@
-require_relative './test_helper.rb'
-require_relative '../lib/database_encoding_changer_table.rb'
+require "test_helper"
 
-class TestDatabaseEncodingChangerTable < Minitest::Test
+class DatabaseEncodingChangerTableTest < Minitest::Test
   def setup
     
     ActiveRecord::Schema.define do
@@ -10,8 +9,8 @@ class TestDatabaseEncodingChangerTable < Minitest::Test
       end
     end
 
-    DatabaseEncodingChangerTable.table_name = 'test_1'
-    @table = DatabaseEncodingChangerTable
+    MysqlChangeDatabaseEncoding::DatabaseEncodingChangerTable.table_name = 'test_1'
+    @table = MysqlChangeDatabaseEncoding::DatabaseEncodingChangerTable
   end
 
   def teardown
@@ -35,10 +34,10 @@ class TestDatabaseEncodingChangerTable < Minitest::Test
       end
     end
 
-    DatabaseEncodingChangerTable.table_name = 'test_2' # reload schema info
-    DatabaseEncodingChangerTable.reset_column_information
+    MysqlChangeDatabaseEncoding::DatabaseEncodingChangerTable.table_name = 'test_2' # reload schema info
+    MysqlChangeDatabaseEncoding::DatabaseEncodingChangerTable.reset_column_information
 
-    assert !(DatabaseEncodingChangerTable.columns.to_a.map(&:name).include?('id'))
+    assert !(MysqlChangeDatabaseEncoding::DatabaseEncodingChangerTable.columns.to_a.map(&:name).include?('id'))
 
 
     assert_equal false, @table.eligible_for_online_schema_change?

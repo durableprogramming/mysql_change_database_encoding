@@ -1,13 +1,11 @@
-require 'minitest/autorun'
-require_relative '../lib/mcde_options_parser.rb'
-require_relative './test_helper.rb'
+require "test_helper"
 
-class McdeOptionsParserTest < Minitest::Test
+class OptionsParserTest < Minitest::Test
   def setup
     @before_env = ENV.to_h
     @before_argv = ARGV.dup
     ARGV.clear
-    @options_parser = McdeOptionsParser
+    @options_parser = MysqlChangeDatabaseEncoding::OptionsParser
   end
 
   def teardown
