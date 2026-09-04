@@ -19,6 +19,11 @@
 require_relative "mysql_change_database_encoding/version"
 
 module MysqlChangeDatabaseEncoding
+  # Raised for user-facing errors: bad or insufficient command-line options,
+  # and anything else the CLI should report as a message rather than a
+  # backtrace.
+  class Error < StandardError; end
+
   autoload :CLI, "mysql_change_database_encoding/cli"
   autoload :DatabaseEncodingChanger, "mysql_change_database_encoding/database_encoding_changer"
   autoload :DatabaseEncodingChangerTable, "mysql_change_database_encoding/database_encoding_changer_table"

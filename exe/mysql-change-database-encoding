@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "mysql_change_database_encoding"
+
+exit MysqlChangeDatabaseEncoding::CLI.run(ARGV)
+
+# Copyright (c) 2026 Durable Programming, LLC. All rights reserved.
+# See LICENSE for details.

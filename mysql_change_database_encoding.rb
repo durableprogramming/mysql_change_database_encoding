@@ -1,30 +1,19 @@
-# Copyright 2018, David Berube. All rights reserved.
-# See LICENSE for license details.
+#!/usr/bin/env ruby
+# frozen_string_literal: true
 
-require 'bundler'
-Bundler.require
+# Deprecated entry point, kept so that existing invocations of
+#
+#   ruby mysql_change_database_encoding.rb --encoding utf8mb4
+#
+# keep working. New callers should use the exe/mysql-change-database-encoding
+# binary, which is what the deb, rpm, and Docker packages install.
 
-require 'active_record'
-require 'pp'
+warn "WARNING: running mysql_change_database_encoding.rb directly is deprecated; " \
+     "use the mysql-change-database-encoding executable instead."
 
-require_relative 'lib/mysql_change_database_encoding'
+require_relative "lib/mysql_change_database_encoding"
 
-include MysqlChangeDatabaseEncoding
+exit MysqlChangeDatabaseEncoding::CLI.run(ARGV)
 
-options = OptionsParser.parse! # This method returns an options hash from  options passed via the command line;
-                               # note that if invalid or insufficient options are passed, execution will terminate inside of this method.
-
-puts "Connecting to #{options[:database]}"
-
-ActiveRecord::Base.establish_connection(  adapter: 'mysql2',
-                                          host: options[:host],
-                                          port: options[:port],
-                                          database: options[:database],
-                                          username: options[:user],
-                                          password: options[:password])
-
-
-dec = DatabaseEncodingChanger.new(options)
-dec.run! # This set the default encoding and/or collation for the database;
-         # it will then will loop through all of the tables in the database and, likewise,
-         # set the default encoding and/or collation.
+# Copyright (c) 2026 Durable Programming, LLC. All rights reserved.
+# See LICENSE for details.

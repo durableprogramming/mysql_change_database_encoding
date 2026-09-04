@@ -56,9 +56,7 @@ module MysqlChangeDatabaseEncoding
 
       table_list.each do |table|
 
-        DatabaseEncodingChangerTable.class_eval do
-          self.table_name = table
-        end
+        DatabaseEncodingChangerTable.use_table(table)
 
         verbose_puts "Processing #{table}"
 

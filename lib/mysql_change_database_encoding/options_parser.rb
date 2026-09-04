@@ -23,7 +23,7 @@ require "optparse"
 
 module MysqlChangeDatabaseEncoding
   module OptionsParser
-    def self.parse!
+    def self.parse!(argv = ARGV)
     
       options = {}
 
@@ -99,7 +99,7 @@ module MysqlChangeDatabaseEncoding
             options[:verbose] = v
           end
 
-      end.parse!
+      end.parse!(argv)
      
       if !options[:pt_online_schema_change_path] && options[:osc]
         puts "WARNING: pt_online_schema_change not detected; online schema change functionality disabled."
@@ -107,11 +107,11 @@ module MysqlChangeDatabaseEncoding
       end
 
       if !options[:encoding] && !options[:collation]
-        raise 'ERROR: One of ENCODING or COLLATION must be specified. Hint: try "--encoding utf8mb4".'
+        raise Error, 'ERROR: One of ENCODING or COLLATION must be specified. Hint: try "--encoding utf8mb4".'
       end
 
       if !(options[:direct_alter_table] || options[:osc])
-        raise "ERROR: Either --direct_alter_table or --osc must be enabled."
+        raise Error, "ERROR: Either --direct_alter_table or --osc must be enabled."
       end
       options
     end
