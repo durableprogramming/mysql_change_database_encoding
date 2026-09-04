@@ -1,0 +1,80 @@
+#!/bin/bash
+# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# See LICENSE for license details.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="$PROJECT_DIR/build"
+DEB_BUILD_DIR="$BUILD_DIR/deb"
+
+# Parse command line arguments
+VERSION=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 --version VERSION"
+            echo "Build DEB package for mysql-change-database-encoding"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$VERSION" ]]; then
+    echo "Error: Version is required. Use --version VERSION" >&2
+    exit 1
+fi
+
+echo "Building DEB package version $VERSION"
+
+# Clean and create build directories
+rm -rf "$DEB_BUILD_DIR"
+mkdir -p "$DEB_BUILD_DIR"
+
+# Create package structure
+PACKAGE_NAME="mysql-change-database-encoding_${VERSION}_all"
+PACKAGE_DIR="$DEB_BUILD_DIR/$PACKAGE_NAME"
+
+mkdir -p "$PACKAGE_DIR/DEBIAN"
+mkdir -p "$PACKAGE_DIR/usr/bin"
+mkdir -p "$PACKAGE_DIR/usr/share/mysql-change-database-encoding/lib"
+mkdir -p "$PACKAGE_DIR/usr/share/doc/mysql-change-database-encoding"
+
+# Copy control files
+cp packaging/deb/control "$PACKAGE_DIR/DEBIAN/"
+cp packaging/deb/copyright "$PACKAGE_DIR/DEBIAN/"
+
+# Update version in control file
+sed -i "s/VERSION_PLACEHOLDER/$VERSION/" "$PACKAGE_DIR/DEBIAN/control"
+
+# Install files according to install file
+cd "$PROJECT_DIR"
+cp mysql_change_database_encoding.rb "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
+chmod 755 "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
+
+cp -r lib/* "$PACKAGE_DIR/usr/share/mysql-change-database-encoding/lib/"
+cp README.md "$PACKAGE_DIR/usr/share/doc/mysql-change-database-encoding/"
+cp LICENSE "$PACKAGE_DIR/usr/share/doc/mysql-change-database-encoding/"
+
+# Update shebang and library paths in the main script
+sed -i '1s|.*|#!/usr/bin/env ruby|' "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
+sed -i "s|require_relative 'lib/|require '/usr/share/mysql-change-database-encoding/lib/|g" "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
+
+# Build package
+cd "$DEB_BUILD_DIR"
+dpkg-deb --build "$PACKAGE_NAME"
+
+# Copy built DEB to project directory
+cp "$PACKAGE_NAME.deb" "$PROJECT_DIR/"
+
+echo "DEB package built successfully:"
+ls -la "$PROJECT_DIR"/*.deb

@@ -1,0 +1,73 @@
+#!/bin/bash
+# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# See LICENSE for license details.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="$PROJECT_DIR/build"
+RPM_BUILD_DIR="$BUILD_DIR/rpm"
+
+# Parse command line arguments
+VERSION=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 --version VERSION"
+            echo "Build RPM package for mysql-change-database-encoding"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$VERSION" ]]; then
+    echo "Error: Version is required. Use --version VERSION" >&2
+    exit 1
+fi
+
+echo "Building RPM package version $VERSION"
+
+# Clean and create build directories
+rm -rf "$BUILD_DIR"
+mkdir -p "$RPM_BUILD_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+# Create source tarball
+TARBALL_NAME="mysql-change-database-encoding-$VERSION.tar.gz"
+cd "$PROJECT_DIR"
+tar --exclude='.git' \
+    --exclude='build' \
+    --exclude='*.rpm' \
+    --exclude='*.deb' \
+    --exclude='*.tar.gz' \
+    --transform "s,^,mysql-change-database-encoding-$VERSION/," \
+    -czf "$RPM_BUILD_DIR/SOURCES/$TARBALL_NAME" \
+    mysql_change_database_encoding.rb \
+    lib/ \
+    README.md \
+    LICENSE \
+    Gemfile \
+    Gemfile.lock
+
+# Copy spec file
+cp packaging/rpm/mysql-change-database-encoding.spec "$RPM_BUILD_DIR/SPECS/"
+
+# Build RPM
+export VERSION="$VERSION"
+rpmbuild --define "_topdir $RPM_BUILD_DIR" \
+         -ba "$RPM_BUILD_DIR/SPECS/mysql-change-database-encoding.spec"
+
+# Copy built RPMs to project directory
+cp "$RPM_BUILD_DIR"/RPMS/noarch/*.rpm "$PROJECT_DIR/"
+cp "$RPM_BUILD_DIR"/SRPMS/*.rpm "$PROJECT_DIR/"
+
+echo "RPM packages built successfully:"
+ls -la "$PROJECT_DIR"/*.rpm

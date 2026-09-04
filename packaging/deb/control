@@ -1,0 +1,15 @@
+Package: mysql-change-database-encoding
+Version: VERSION_PLACEHOLDER
+Section: database
+Priority: optional
+Architecture: all
+Depends: ruby (>= 1:2.7), ruby-mysql2, ruby-activerecord
+Maintainer: Durable Programming LLC <commercial@durableprogramming.com>
+Homepage: https://github.com/durableprogramming/mysql_change_database_encoding
+Description: Tool for changing a database's encoding, collation, or both
+ Tool for changing a database's encoding, collation, or both. Supports online 
+ schema change via pt-online-schema-change with configurable fallback.
+ .
+ This tool can be used to migrate MySQL databases from legacy encodings
+ like latin1 to modern UTF-8 encodings like utf8mb4, with support for
+ online schema changes to minimize downtime.

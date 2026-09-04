@@ -1,0 +1,180 @@
+#!/bin/bash
+# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# See LICENSE for license details.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Default values
+VERSION=""
+BUILD_RPM=false
+BUILD_DEB=false
+BUILD_DOCKER=false
+PUSH_DOCKER=false
+REGISTRY="docker.io"
+IMAGE_NAME="durableprogramming/mysql-change-database-encoding"
+PLATFORMS="linux/amd64,linux/arm64"
+
+show_help() {
+    cat << EOF
+Usage: $0 --version VERSION [OPTIONS]
+
+Build packages for mysql-change-database-encoding
+
+Options:
+  -v, --version VERSION     Version for the packages (required)
+  --rpm                     Build RPM package
+  --deb                     Build DEB package
+  --docker                  Build Docker image
+  --all                     Build all package types (RPM, DEB, Docker)
+  --push-docker             Push Docker image to registry after build
+  --registry REGISTRY       Docker registry (default: docker.io)
+  --image IMAGE             Docker image name (default: durableprogramming/mysql-change-database-encoding)
+  --platforms PLATFORMS     Docker platforms (default: linux/amd64,linux/arm64)
+  -h, --help               Show this help message
+
+Examples:
+  $0 --version 1.2.3 --all                    # Build all package types
+  $0 --version 1.2.3 --rpm --deb              # Build RPM and DEB only
+  $0 --version 1.2.3 --docker --push-docker   # Build and push Docker image
+EOF
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        --rpm)
+            BUILD_RPM=true
+            shift
+            ;;
+        --deb)
+            BUILD_DEB=true
+            shift
+            ;;
+        --docker)
+            BUILD_DOCKER=true
+            shift
+            ;;
+        --all)
+            BUILD_RPM=true
+            BUILD_DEB=true
+            BUILD_DOCKER=true
+            shift
+            ;;
+        --push-docker)
+            PUSH_DOCKER=true
+            shift
+            ;;
+        --registry)
+            REGISTRY="$2"
+            shift 2
+            ;;
+        --image)
+            IMAGE_NAME="$2"
+            shift 2
+            ;;
+        --platforms)
+            PLATFORMS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            echo "Use --help for usage information."
+            exit 1
+            ;;
+    esac
+done
+
+# Validate inputs
+if [[ -z "$VERSION" ]]; then
+    echo "Error: Version is required. Use --version VERSION" >&2
+    echo "Use --help for usage information."
+    exit 1
+fi
+
+if [[ "$BUILD_RPM" == "false" && "$BUILD_DEB" == "false" && "$BUILD_DOCKER" == "false" ]]; then
+    echo "Error: At least one package type must be specified (--rpm, --deb, --docker, or --all)" >&2
+    echo "Use --help for usage information."
+    exit 1
+fi
+
+echo "Building packages for version $VERSION"
+echo "Package types: RPM=$BUILD_RPM, DEB=$BUILD_DEB, Docker=$BUILD_DOCKER"
+
+cd "$PROJECT_DIR"
+
+# Clean up old packages
+echo "Cleaning up old packages..."
+rm -f *.rpm *.deb *.tar.gz
+
+# Build RPM
+if [[ "$BUILD_RPM" == "true" ]]; then
+    echo ""
+    echo "=== Building RPM package ==="
+    if ! command -v rpmbuild &> /dev/null; then
+        echo "Error: rpmbuild not found. Please install rpm-build package." >&2
+        exit 1
+    fi
+    
+    "$SCRIPT_DIR/build-rpm" --version "$VERSION"
+    echo "RPM build completed successfully"
+fi
+
+# Build DEB
+if [[ "$BUILD_DEB" == "true" ]]; then
+    echo ""
+    echo "=== Building DEB package ==="
+    if ! command -v dpkg-deb &> /dev/null; then
+        echo "Error: dpkg-deb not found. Please install dpkg-dev package." >&2
+        exit 1
+    fi
+    
+    "$SCRIPT_DIR/build-deb" --version "$VERSION"
+    echo "DEB build completed successfully"
+fi
+
+# Build Docker
+if [[ "$BUILD_DOCKER" == "true" ]]; then
+    echo ""
+    echo "=== Building Docker image ==="
+    if ! command -v docker &> /dev/null; then
+        echo "Error: docker not found. Please install Docker." >&2
+        exit 1
+    fi
+    
+    DOCKER_ARGS=(--version "$VERSION" --registry "$REGISTRY" --image "$IMAGE_NAME" --platforms "$PLATFORMS")
+    if [[ "$PUSH_DOCKER" == "true" ]]; then
+        DOCKER_ARGS+=(--push)
+    fi
+    
+    "$SCRIPT_DIR/build-docker" "${DOCKER_ARGS[@]}"
+    echo "Docker build completed successfully"
+fi
+
+echo ""
+echo "=== Build Summary ==="
+echo "Version: $VERSION"
+
+if [[ "$BUILD_RPM" == "true" || "$BUILD_DEB" == "true" ]]; then
+    echo "Built packages:"
+    ls -la *.rpm *.deb 2>/dev/null || true
+fi
+
+if [[ "$BUILD_DOCKER" == "true" ]]; then
+    FULL_IMAGE_NAME="${REGISTRY}/${IMAGE_NAME}"
+    echo "Built Docker images:"
+    docker images "${FULL_IMAGE_NAME}" | head -2
+fi
+
+echo ""
+echo "All builds completed successfully!"

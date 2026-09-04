@@ -1,5 +1,26 @@
-# Copyright 2018, David Berube. All rights reserved.
-# See LICENSE for license details.
+# Command-line tool logic for changing the character encoding and/or collation
+# of a MySQL database and its tables. Given a set of options (database
+# connection info, target encoding/collation, and behavior flags), this class:
+#
+# - Issues an ALTER DATABASE statement to change the database's default
+# character set and/or collation.
+# - Iterates over the base tables in the target database (via
+# information_schema, using DatabaseEncodingChangerTable for per-table
+# metadata) and alters each one to match, skipping tables that are already
+# in the target collation unless :overwrite is set.
+# - For each table, prefers running the ALTER TABLE via Percona's
+# pt-online-schema-change (OSC) to avoid locking, when :osc is enabled and
+# the table is eligible (i.e. it has a primary key). Falls back to a direct
+# ALTER TABLE statement when OSC is disabled/ineligible and
+# :direct_alter_table is set; otherwise the table is skipped.
+# - Supports :skip_table_on_error to continue processing remaining tables
+# after a SQL error instead of aborting the whole run.
+#
+# Expects an options hash (see McdeOptionsParser) with keys such as
+# :connection, :database, :encoding, :collation, :osc, :osc_options,
+# :direct_alter_table, :skip_table_on_error, :overwrite, and :verbose, plus
+# MySQL connection parameters (:host, :port, :user, :password) used to build
+# the DSN passed to pt-online-schema-change.
 
 require 'active_record'
 require_relative './database_encoding_changer_table'
@@ -171,3 +192,6 @@ class DatabaseEncodingChanger
   end
 
 end
+
+# Copyright (c) 2026 Durable Programming, LLC. All rights reserved.
+# See LICENSE for details.

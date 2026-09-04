@@ -1,0 +1,4 @@
+mysql_change_database_encoding.rb usr/bin/mysql-change-database-encoding
+lib/* usr/share/mysql-change-database-encoding/lib/
+README.md usr/share/doc/mysql-change-database-encoding/
+LICENSE usr/share/doc/mysql-change-database-encoding/

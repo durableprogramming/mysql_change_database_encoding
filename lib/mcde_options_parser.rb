@@ -1,3 +1,23 @@
+# Command-line option parsing for the database encoding changer tool. Defines
+# McdeOptionsParser.parse!, which builds and returns an options hash consumed by
+# DatabaseEncodingChanger.
+#
+# Defaults are seeded from environment variables (MYSQL_HOST, MYSQL_DATABASE,
+# MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD) and from detecting whether
+# pt-online-schema-change is available on PATH (via `which`), which seeds
+# :pt_online_schema_change_path and determines whether :osc defaults to true.
+#
+# Recognized flags cover MySQL connection info (--host, --port, --database,
+# --user, --password), the migration target (--encoding, --collation, at least
+# one of which is required), and behavior flags (--direct-alter-table, --osc,
+# --osc-options, --overwrite, --skip-table-on-error, --verbose).
+#
+# After parsing, validates the result and raises a RuntimeError if:
+# - neither :encoding nor :collation was specified, or
+# - neither :direct_alter_table nor :osc is enabled (no way to alter tables).
+#
+# If pt-online-schema-change is not found but --osc was left at its default,
+# :osc is silently disabled with a warning rather than raising an error.
 
 module McdeOptionsParser
   def self.parse!
@@ -94,3 +114,5 @@ module McdeOptionsParser
   end
 end
 
+# Copyright (c) 2026 Durable Programming, LLC. All rights reserved.
+# See LICENSE for details.

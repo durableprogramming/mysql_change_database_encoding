@@ -1,0 +1,32 @@
+# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# See LICENSE for license details.
+
+# Build artifacts
+build/
+*.rpm
+*.deb
+*.tar.gz
+
+# Git
+.git/
+.gitignore
+
+# Development files
+.pry_history
+test/
+
+# Documentation (except README)
+*.md
+!README.md
+
+# Packaging files
+packaging/
+script/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

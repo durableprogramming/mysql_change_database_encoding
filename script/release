@@ -1,0 +1,318 @@
+#!/bin/bash
+# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# See LICENSE for license details.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Default values
+VERSION=""
+DRY_RUN=false
+BUILD_PACKAGES=true
+UPLOAD_PACKAGES=true
+CREATE_GITHUB_RELEASE=true
+PUSH_DOCKER=false
+REGISTRY="docker.io"
+IMAGE_NAME="durableprogramming/mysql-change-database-encoding"
+PLATFORMS="linux/amd64,linux/arm64"
+
+show_help() {
+    cat << EOF
+Usage: $0 --version VERSION [OPTIONS]
+
+Create a new release with packages for mysql-change-database-encoding
+
+This script will:
+1. Validate the version format
+2. Check for clean git working directory
+3. Build all package types (RPM, DEB, Docker)
+4. Create a git tag for the version
+5. Create a GitHub release with package attachments
+6. Optionally push Docker images to registry
+
+Options:
+  -v, --version VERSION        Version for the release (required, e.g., 1.2.3)
+  --dry-run                    Show what would be done without making changes
+  --no-build                   Skip building packages
+  --no-upload                  Skip uploading packages to GitHub release
+  --no-github-release          Skip creating GitHub release
+  --push-docker                Push Docker image to registry
+  --registry REGISTRY          Docker registry (default: docker.io)
+  --image IMAGE                Docker image name (default: durableprogramming/mysql-change-database-encoding)
+  --platforms PLATFORMS        Docker platforms (default: linux/amd64,linux/arm64)
+  -h, --help                  Show this help message
+
+Prerequisites:
+  - gh CLI tool installed and authenticated
+  - Clean git working directory
+  - Push access to the GitHub repository
+  - For Docker: docker buildx setup and registry credentials
+
+Examples:
+  $0 --version 1.2.3                           # Create release with packages
+  $0 --version 1.2.3 --dry-run                 # Preview what would happen
+  $0 --version 1.2.3 --push-docker             # Create release and push Docker image
+EOF
+}
+
+validate_version() {
+    local version="$1"
+    if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
+        echo "Error: Version must follow semantic versioning (e.g., 1.2.3)" >&2
+        return 1
+    fi
+}
+
+check_prerequisites() {
+    # Check for required tools
+    if ! command -v git &> /dev/null; then
+        echo "Error: git is required but not installed" >&2
+        exit 1
+    fi
+    
+    if [[ "$CREATE_GITHUB_RELEASE" == "true" ]] && ! command -v gh &> /dev/null; then
+        echo "Error: GitHub CLI (gh) is required but not installed" >&2
+        echo "Install from: https://cli.github.com/" >&2
+        exit 1
+    fi
+    
+    if [[ "$BUILD_PACKAGES" == "true" ]]; then
+        if ! command -v rpmbuild &> /dev/null; then
+            echo "Warning: rpmbuild not found - RPM package will not be built" >&2
+        fi
+        
+        if ! command -v dpkg-deb &> /dev/null; then
+            echo "Warning: dpkg-deb not found - DEB package will not be built" >&2
+        fi
+        
+        if ! command -v docker &> /dev/null; then
+            echo "Warning: docker not found - Docker image will not be built" >&2
+        fi
+    fi
+    
+    # Check git status
+    cd "$PROJECT_DIR"
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "Error: Working directory is not clean. Please commit or stash changes." >&2
+        echo "Git status:" >&2
+        git status --short >&2
+        exit 1
+    fi
+    
+    # Check if we're on a branch that can be pushed
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$current_branch" == "HEAD" ]]; then
+        echo "Error: Currently in detached HEAD state. Please checkout a branch." >&2
+        exit 1
+    fi
+    
+    # Check if tag already exists
+    if git tag -l | grep -q "^v${VERSION}$"; then
+        echo "Error: Tag v${VERSION} already exists" >&2
+        exit 1
+    fi
+    
+    # Check GitHub authentication if creating release
+    if [[ "$CREATE_GITHUB_RELEASE" == "true" ]]; then
+        if ! gh auth status &> /dev/null; then
+            echo "Error: Not authenticated with GitHub CLI. Run 'gh auth login'" >&2
+            exit 1
+        fi
+    fi
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --no-build)
+            BUILD_PACKAGES=false
+            shift
+            ;;
+        --no-upload)
+            UPLOAD_PACKAGES=false
+            shift
+            ;;
+        --no-github-release)
+            CREATE_GITHUB_RELEASE=false
+            shift
+            ;;
+        --push-docker)
+            PUSH_DOCKER=true
+            shift
+            ;;
+        --registry)
+            REGISTRY="$2"
+            shift 2
+            ;;
+        --image)
+            IMAGE_NAME="$2"
+            shift 2
+            ;;
+        --platforms)
+            PLATFORMS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            echo "Use --help for usage information."
+            exit 1
+            ;;
+    esac
+done
+
+# Validate inputs
+if [[ -z "$VERSION" ]]; then
+    echo "Error: Version is required. Use --version VERSION" >&2
+    exit 1
+fi
+
+validate_version "$VERSION"
+
+echo "Creating release for version $VERSION"
+echo "Dry run: $DRY_RUN"
+echo "Build packages: $BUILD_PACKAGES"
+echo "Create GitHub release: $CREATE_GITHUB_RELEASE"
+echo "Push Docker: $PUSH_DOCKER"
+
+if [[ "$DRY_RUN" == "false" ]]; then
+    check_prerequisites
+else
+    echo ""
+    echo "=== DRY RUN MODE - No changes will be made ==="
+fi
+
+cd "$PROJECT_DIR"
+
+# Step 1: Build packages
+if [[ "$BUILD_PACKAGES" == "true" ]]; then
+    echo ""
+    echo "=== Building packages ==="
+    
+    BUILD_ARGS=(--version "$VERSION" --all)
+    if [[ "$PUSH_DOCKER" == "true" ]]; then
+        BUILD_ARGS+=(--push-docker --registry "$REGISTRY" --image "$IMAGE_NAME" --platforms "$PLATFORMS")
+    fi
+    
+    if [[ "$DRY_RUN" == "false" ]]; then
+        "$SCRIPT_DIR/build" "${BUILD_ARGS[@]}"
+    else
+        echo "Would run: $SCRIPT_DIR/build ${BUILD_ARGS[*]}"
+    fi
+fi
+
+# Step 2: Create and push git tag
+echo ""
+echo "=== Creating git tag ==="
+TAG_NAME="v${VERSION}"
+if [[ "$DRY_RUN" == "false" ]]; then
+    git tag -a "$TAG_NAME" -m "Release $VERSION"
+    git push origin "$TAG_NAME"
+    echo "Created and pushed tag: $TAG_NAME"
+else
+    echo "Would create tag: $TAG_NAME"
+    echo "Would push tag to origin"
+fi
+
+# Step 3: Create GitHub release
+if [[ "$CREATE_GITHUB_RELEASE" == "true" ]]; then
+    echo ""
+    echo "=== Creating GitHub release ==="
+    
+    # Generate release notes
+    RELEASE_TITLE="mysql-change-database-encoding $VERSION"
+    RELEASE_NOTES="Release $VERSION
+
+## Changes
+$(git log --oneline $(git describe --tags --abbrev=0 HEAD~1)..HEAD 2>/dev/null | head -10 | sed 's/^/- /' || echo "- Initial release")
+
+## Downloads
+- **RPM Package**: mysql-change-database-encoding-${VERSION}-1.noarch.rpm
+- **DEB Package**: mysql-change-database-encoding_${VERSION}_all.deb
+- **Docker Image**: \`${REGISTRY}/${IMAGE_NAME}:${VERSION}\`
+
+## Installation
+
+### RPM (RedHat/CentOS/Fedora):
+\`\`\`bash
+sudo rpm -i mysql-change-database-encoding-${VERSION}-1.noarch.rpm
+\`\`\`
+
+### DEB (Ubuntu/Debian):
+\`\`\`bash
+sudo dpkg -i mysql-change-database-encoding_${VERSION}_all.deb
+\`\`\`
+
+### Docker:
+\`\`\`bash
+docker run --rm ${REGISTRY}/${IMAGE_NAME}:${VERSION} --help
+\`\`\`
+
+## Usage
+See the README.md for detailed usage instructions."
+
+    if [[ "$DRY_RUN" == "false" ]]; then
+        # Create release
+        gh release create "$TAG_NAME" \
+            --title "$RELEASE_TITLE" \
+            --notes "$RELEASE_NOTES"
+            
+        # Upload packages if they exist and upload is enabled
+        if [[ "$UPLOAD_PACKAGES" == "true" ]]; then
+            echo "Uploading packages to release..."
+            
+            # Upload RPM if it exists
+            if ls *.rpm 1> /dev/null 2>&1; then
+                gh release upload "$TAG_NAME" *.rpm
+                echo "Uploaded RPM packages"
+            fi
+            
+            # Upload DEB if it exists
+            if ls *.deb 1> /dev/null 2>&1; then
+                gh release upload "$TAG_NAME" *.deb
+                echo "Uploaded DEB packages"
+            fi
+        fi
+        
+        echo "GitHub release created: https://github.com/$(gh repo view --json owner,name -q '.owner.login + \"/\" + .name')/releases/tag/$TAG_NAME"
+    else
+        echo "Would create GitHub release: $TAG_NAME"
+        echo "Would upload packages: RPM and DEB files (if they exist)"
+    fi
+fi
+
+echo ""
+echo "=== Release Summary ==="
+echo "Version: $VERSION"
+echo "Git tag: $TAG_NAME"
+if [[ "$BUILD_PACKAGES" == "true" ]]; then
+    echo "Packages built: RPM, DEB, Docker"
+fi
+if [[ "$PUSH_DOCKER" == "true" ]]; then
+    echo "Docker image pushed: ${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+fi
+if [[ "$CREATE_GITHUB_RELEASE" == "true" ]]; then
+    echo "GitHub release created with package attachments"
+fi
+
+if [[ "$DRY_RUN" == "false" ]]; then
+    echo ""
+    echo "Release $VERSION completed successfully! 🎉"
+else
+    echo ""
+    echo "Dry run completed. Run without --dry-run to execute the release."
+fi

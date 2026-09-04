@@ -1,5 +1,17 @@
 # Copyright 2018, David Berube. All rights reserved.
 # See LICENSE for license details.
+#
+# ActiveRecord model backing the table currently being processed by
+# DatabaseEncodingChanger. table_name is reassigned at runtime (via class_eval)
+# to point this model at whichever base table is being migrated. This model is
+# used purely for schema reflection, never for reading, creating, updating, or
+# deleting row data.
+#
+# eligible_for_online_schema_change? checks whether the table has a primary
+# key, consulting both self.primary_key and the connection's schema cache
+# (since some tables report no primary key through one mechanism but not the
+# other). pt-online-schema-change requires a primary key to operate, so tables
+# without one must fall back to a direct ALTER TABLE or be skipped.
 
 class DatabaseEncodingChangerTable < ActiveRecord::Base
 
@@ -24,3 +36,5 @@ class DatabaseEncodingChangerTable < ActiveRecord::Base
 
 end
 
+# Copyright (c) 2026 Durable Programming, LLC. All rights reserved.
+# See LICENSE for details.
