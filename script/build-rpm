@@ -50,7 +50,7 @@ tar --exclude='.git' \
     --exclude='*.tar.gz' \
     --transform "s,^,mysql-change-database-encoding-$VERSION/," \
     -czf "$RPM_BUILD_DIR/SOURCES/$TARBALL_NAME" \
-    mysql_change_database_encoding.rb \
+    exe/ \
     lib/ \
     README.md \
     LICENSE \

@@ -9,6 +9,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Default values
 VERSION=""
+BUILD_GEM=false
 BUILD_RPM=false
 BUILD_DEB=false
 BUILD_DOCKER=false
@@ -25,10 +26,11 @@ Build packages for mysql-change-database-encoding
 
 Options:
   -v, --version VERSION     Version for the packages (required)
+  --gem                     Build Ruby gem
   --rpm                     Build RPM package
   --deb                     Build DEB package
   --docker                  Build Docker image
-  --all                     Build all package types (RPM, DEB, Docker)
+  --all                     Build all package types (gem, RPM, DEB, Docker)
   --push-docker             Push Docker image to registry after build
   --registry REGISTRY       Docker registry (default: docker.io)
   --image IMAGE             Docker image name (default: durableprogramming/mysql-change-database-encoding)
@@ -49,6 +51,10 @@ while [[ $# -gt 0 ]]; do
             VERSION="$2"
             shift 2
             ;;
+        --gem)
+            BUILD_GEM=true
+            shift
+            ;;
         --rpm)
             BUILD_RPM=true
             shift
@@ -62,6 +68,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --all)
+            BUILD_GEM=true
             BUILD_RPM=true
             BUILD_DEB=true
             BUILD_DOCKER=true
@@ -102,20 +109,38 @@ if [[ -z "$VERSION" ]]; then
     exit 1
 fi
 
-if [[ "$BUILD_RPM" == "false" && "$BUILD_DEB" == "false" && "$BUILD_DOCKER" == "false" ]]; then
-    echo "Error: At least one package type must be specified (--rpm, --deb, --docker, or --all)" >&2
+if [[ "$BUILD_GEM" == "false" && "$BUILD_RPM" == "false" && "$BUILD_DEB" == "false" && "$BUILD_DOCKER" == "false" ]]; then
+    echo "Error: At least one package type must be specified (--gem, --rpm, --deb, --docker, or --all)" >&2
     echo "Use --help for usage information."
     exit 1
 fi
 
 echo "Building packages for version $VERSION"
-echo "Package types: RPM=$BUILD_RPM, DEB=$BUILD_DEB, Docker=$BUILD_DOCKER"
+echo "Package types: gem=$BUILD_GEM, RPM=$BUILD_RPM, DEB=$BUILD_DEB, Docker=$BUILD_DOCKER"
 
 cd "$PROJECT_DIR"
 
 # Clean up old packages
 echo "Cleaning up old packages..."
-rm -f *.rpm *.deb *.tar.gz
+rm -f *.gem *.rpm *.deb *.tar.gz
+
+# Build the gem. The gemspec reads the version from
+# lib/mysql_change_database_encoding/version.rb, so check that it matches the
+# version being released rather than silently shipping a mismatched package.
+if [[ "$BUILD_GEM" == "true" ]]; then
+    echo ""
+    echo "=== Building gem ==="
+
+    GEM_VERSION="$(ruby -Ilib -e 'require "mysql_change_database_encoding/version"; print MysqlChangeDatabaseEncoding::VERSION')"
+    if [[ "$GEM_VERSION" != "$VERSION" ]]; then
+        echo "Error: requested version $VERSION does not match lib/mysql_change_database_encoding/version.rb ($GEM_VERSION)" >&2
+        echo "Update VERSION in that file first." >&2
+        exit 1
+    fi
+
+    gem build mysql_change_database_encoding.gemspec
+    echo "Gem build completed successfully"
+fi
 
 # Build RPM
 if [[ "$BUILD_RPM" == "true" ]]; then
@@ -165,9 +190,9 @@ echo ""
 echo "=== Build Summary ==="
 echo "Version: $VERSION"
 
-if [[ "$BUILD_RPM" == "true" || "$BUILD_DEB" == "true" ]]; then
+if [[ "$BUILD_GEM" == "true" || "$BUILD_RPM" == "true" || "$BUILD_DEB" == "true" ]]; then
     echo "Built packages:"
-    ls -la *.rpm *.deb 2>/dev/null || true
+    ls -la *.gem *.rpm *.deb 2>/dev/null || true
 fi
 
 if [[ "$BUILD_DOCKER" == "true" ]]; then

@@ -13,8 +13,8 @@ License:        GPLv3
 URL:            https://github.com/durableprogramming/mysql_change_database_encoding
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
-BuildRequires:  ruby >= 2.7
-Requires:       ruby >= 2.7
+BuildRequires:  ruby >= 3.0
+Requires:       ruby >= 3.0
 Requires:       rubygem-mysql2
 Requires:       rubygem-activerecord
 Requires:       rubygem-ptools
@@ -35,8 +35,11 @@ mkdir -p %{buildroot}%{_datadir}/%{name}
 mkdir -p %{buildroot}%{_datadir}/%{name}/lib
 mkdir -p %{buildroot}%{_mandir}/man1
 
-# Install main script
-install -m 755 mysql_change_database_encoding.rb %{buildroot}%{_bindir}/mysql-change-database-encoding
+# Install the executable, pointing Ruby at the directory this package
+# installs the library into.
+install -m 755 exe/mysql-change-database-encoding %{buildroot}%{_bindir}/mysql-change-database-encoding
+sed -i 's|^require "mysql_change_database_encoding"$|$LOAD_PATH.unshift "%{_datadir}/%{name}/lib"\nrequire "mysql_change_database_encoding"|' \
+    %{buildroot}%{_bindir}/mysql-change-database-encoding
 
 # Install library files
 cp -r lib/* %{buildroot}%{_datadir}/%{name}/lib/

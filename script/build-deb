@@ -56,18 +56,19 @@ cp packaging/deb/copyright "$PACKAGE_DIR/DEBIAN/"
 # Update version in control file
 sed -i "s/VERSION_PLACEHOLDER/$VERSION/" "$PACKAGE_DIR/DEBIAN/control"
 
-# Install files according to install file
+# Install files according to packaging/deb/install
 cd "$PROJECT_DIR"
-cp mysql_change_database_encoding.rb "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
+cp exe/mysql-change-database-encoding "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
 chmod 755 "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
 
 cp -r lib/* "$PACKAGE_DIR/usr/share/mysql-change-database-encoding/lib/"
 cp README.md "$PACKAGE_DIR/usr/share/doc/mysql-change-database-encoding/"
 cp LICENSE "$PACKAGE_DIR/usr/share/doc/mysql-change-database-encoding/"
 
-# Update shebang and library paths in the main script
-sed -i '1s|.*|#!/usr/bin/env ruby|' "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
-sed -i "s|require_relative 'lib/|require '/usr/share/mysql-change-database-encoding/lib/|g" "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
+# The executable requires the library by name, so point Ruby at the directory
+# the package installs it into.
+sed -i "s|^require \"mysql_change_database_encoding\"$|\$LOAD_PATH.unshift \"/usr/share/mysql-change-database-encoding/lib\"\nrequire \"mysql_change_database_encoding\"|" \
+    "$PACKAGE_DIR/usr/bin/mysql-change-database-encoding"
 
 # Build package
 cd "$DEB_BUILD_DIR"

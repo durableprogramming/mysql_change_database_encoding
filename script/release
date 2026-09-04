@@ -27,7 +27,7 @@ Create a new release with packages for mysql-change-database-encoding
 This script will:
 1. Validate the version format
 2. Check for clean git working directory
-3. Build all package types (RPM, DEB, Docker)
+3. Build all package types (gem, RPM, DEB, Docker)
 4. Create a git tag for the version
 5. Create a GitHub release with package attachments
 6. Optionally push Docker images to registry
@@ -79,6 +79,16 @@ check_prerequisites() {
     fi
     
     if [[ "$BUILD_PACKAGES" == "true" ]]; then
+        # The gemspec reads the version file, so the two must agree before a
+        # release is cut.
+        local gem_version
+        gem_version="$(ruby -Ilib -e 'require "mysql_change_database_encoding/version"; print MysqlChangeDatabaseEncoding::VERSION')"
+        if [[ "$gem_version" != "$VERSION" ]]; then
+            echo "Error: requested version $VERSION does not match lib/mysql_change_database_encoding/version.rb ($gem_version)" >&2
+            echo "Update VERSION in that file and commit before releasing." >&2
+            exit 1
+        fi
+
         if ! command -v rpmbuild &> /dev/null; then
             echo "Warning: rpmbuild not found - RPM package will not be built" >&2
         fi
@@ -241,6 +251,7 @@ if [[ "$CREATE_GITHUB_RELEASE" == "true" ]]; then
 $(git log --oneline $(git describe --tags --abbrev=0 HEAD~1)..HEAD 2>/dev/null | head -10 | sed 's/^/- /' || echo "- Initial release")
 
 ## Downloads
+- **Ruby gem**: mysql_change_database_encoding-${VERSION}.gem
 - **RPM Package**: mysql-change-database-encoding-${VERSION}-1.noarch.rpm
 - **DEB Package**: mysql-change-database-encoding_${VERSION}_all.deb
 - **Docker Image**: \`${REGISTRY}/${IMAGE_NAME}:${VERSION}\`
@@ -275,6 +286,12 @@ See the README.md for detailed usage instructions."
         if [[ "$UPLOAD_PACKAGES" == "true" ]]; then
             echo "Uploading packages to release..."
             
+            # Upload gem if it exists
+            if ls *.gem 1> /dev/null 2>&1; then
+                gh release upload "$TAG_NAME" *.gem
+                echo "Uploaded gem"
+            fi
+
             # Upload RPM if it exists
             if ls *.rpm 1> /dev/null 2>&1; then
                 gh release upload "$TAG_NAME" *.rpm
@@ -300,7 +317,7 @@ echo "=== Release Summary ==="
 echo "Version: $VERSION"
 echo "Git tag: $TAG_NAME"
 if [[ "$BUILD_PACKAGES" == "true" ]]; then
-    echo "Packages built: RPM, DEB, Docker"
+    echo "Packages built: gem, RPM, DEB, Docker"
 fi
 if [[ "$PUSH_DOCKER" == "true" ]]; then
     echo "Docker image pushed: ${REGISTRY}/${IMAGE_NAME}:${VERSION}"

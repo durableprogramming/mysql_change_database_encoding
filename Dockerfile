@@ -1,33 +1,36 @@
-# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# Copyright 2026, Durable Programming, LLC. All rights reserved.
 # See LICENSE for license details.
 
-FROM ruby:3.1-alpine
+FROM ruby:3.3-alpine AS build
 
-# Install system dependencies
-RUN apk add --no-cache \
-    build-base \
-    mysql-dev \
-    mysql-client \
-    bash \
-    && rm -rf /var/cache/apk/*
+RUN apk add --no-cache build-base mariadb-dev git
 
-# Create application directory
-WORKDIR /app
+WORKDIR /build
 
-# Copy Gemfile and install Ruby dependencies
-COPY Gemfile Gemfile.lock ./
-RUN bundle install --without development test
+# The gemspec reads the version file and shells out to git ls-files, so both
+# need to be present before the gem can be built.
+COPY . .
+RUN gem build mysql_change_database_encoding.gemspec -o mysql_change_database_encoding.gem
 
-# Copy application files
-COPY mysql_change_database_encoding.rb ./
-COPY lib/ ./lib/
-COPY README.md LICENSE ./
 
-# Create a non-root user
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
+FROM ruby:3.3-alpine
+
+# mariadb-connector-c provides the client library mysql2 links against.
+# percona-toolkit supplies pt-online-schema-change, which the tool uses to
+# alter tables without locking them.
+RUN apk add --no-cache mariadb-connector-c mariadb-client percona-toolkit
+
+# Build dependencies are needed to compile the mysql2 native extension, then
+# dropped so they do not ship in the final image.
+COPY --from=build /build/mysql_change_database_encoding.gem /tmp/
+RUN apk add --no-cache --virtual .build-deps build-base mariadb-dev \
+    && gem install --no-document /tmp/mysql_change_database_encoding.gem \
+    && rm /tmp/mysql_change_database_encoding.gem \
+    && apk del .build-deps
+
+RUN addgroup -g 1000 appuser \
+    && adduser -D -u 1000 -G appuser appuser
 USER appuser
 
-# Set the entrypoint
-ENTRYPOINT ["ruby", "mysql_change_database_encoding.rb"]
+ENTRYPOINT ["mysql-change-database-encoding"]
 CMD ["--help"]

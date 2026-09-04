@@ -1,19 +1,20 @@
-# Copyright 2024, Durable Programming, LLC. All rights reserved.
+# Copyright 2026, Durable Programming, LLC. All rights reserved.
 # See LICENSE for license details.
 
 # Build artifacts
 build/
+coverage/
+pkg/
+*.gem
 *.rpm
 *.deb
 *.tar.gz
 
-# Git
-.git/
-.gitignore
-
-# Development files
+# Development environment
+.devenv/
+.direnv/
+.devenv.flake.nix
 .pry_history
-test/
 
 # Documentation (except README)
 *.md
