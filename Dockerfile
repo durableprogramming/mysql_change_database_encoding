@@ -1,9 +1,11 @@
 # Copyright 2026, Durable Programming, LLC. All rights reserved.
 # See LICENSE for license details.
 
-FROM ruby:3.3-alpine AS build
+FROM ruby:3.3-slim AS build
 
-RUN apk add --no-cache build-base mariadb-dev git
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential libmariadb-dev git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
@@ -13,23 +15,28 @@ COPY . .
 RUN gem build mysql_change_database_encoding.gemspec -o mysql_change_database_encoding.gem
 
 
-FROM ruby:3.3-alpine
+FROM ruby:3.3-slim
 
-# mariadb-connector-c provides the client library mysql2 links against.
+# libmariadb3 provides the client library mysql2 links against, and
 # percona-toolkit supplies pt-online-schema-change, which the tool uses to
 # alter tables without locking them.
-RUN apk add --no-cache mariadb-connector-c mariadb-client percona-toolkit
-
-# Build dependencies are needed to compile the mysql2 native extension, then
-# dropped so they do not ship in the final image.
+#
+# The build toolchain is needed to compile the mysql2 native extension and is
+# removed afterwards so that it does not ship in the final image.
 COPY --from=build /build/mysql_change_database_encoding.gem /tmp/
-RUN apk add --no-cache --virtual .build-deps build-base mariadb-dev \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libmariadb3 \
+        default-mysql-client \
+        percona-toolkit \
+    && apt-get install -y --no-install-recommends build-essential libmariadb-dev \
     && gem install --no-document /tmp/mysql_change_database_encoding.gem \
     && rm /tmp/mysql_change_database_encoding.gem \
-    && apk del .build-deps
+    && apt-get purge -y build-essential libmariadb-dev \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -g 1000 appuser \
-    && adduser -D -u 1000 -G appuser appuser
+RUN useradd --create-home --uid 1000 appuser
 USER appuser
 
 ENTRYPOINT ["mysql-change-database-encoding"]

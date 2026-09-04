@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # mysql_change_database_encoding - Change a MySQL database's encoding and collation
 #
 # This is the main entry point for the library. It exposes the pieces that make

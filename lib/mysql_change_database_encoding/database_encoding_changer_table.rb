@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Copyright 2018, David Berube. All rights reserved.
 # See LICENSE for license details.
 #

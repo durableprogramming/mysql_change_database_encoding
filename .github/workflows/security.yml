@@ -1,0 +1,35 @@
+# Copyright 2026, Durable Programming, LLC. All rights reserved.
+# See LICENSE for license details.
+
+name: Security
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    # Dependency advisories are published continuously, so re-check weekly
+    # rather than only when the code changes.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Audit dependencies for known vulnerabilities
+      run: |
+        gem install bundler-audit
+        bundle-audit check --update

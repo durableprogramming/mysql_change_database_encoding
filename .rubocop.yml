@@ -4,9 +4,46 @@ AllCops:
   Exclude:
     - "vendor/**/*"
     - "packaging/**/*"
+    - ".devenv/**/*"
+    - ".direnv/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+# The option parser is one long declarative block of flag definitions, and
+# DatabaseEncodingChanger#run! is a single linear migration procedure. Splitting
+# either up to satisfy a line count would make them harder to follow, not
+# easier.
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/BlockLength:
+  Enabled: false
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+# Each file carries a prose comment at the top describing what it does; a
+# separate class-level comment would only repeat it.
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 120
+
+# Test files describe behavior through long, explicit method names.
+Naming/MethodName:
+  Exclude:
+    - "test/**/*"

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Command-line entry point. CLI.run parses the given arguments, opens a MySQL
 # connection from the resulting options, and hands the connection to
 # DatabaseEncodingChanger to do the work.

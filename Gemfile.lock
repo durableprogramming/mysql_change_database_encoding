@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     mysql_change_database_encoding (0.1.0)
-      activerecord (>= 6.0)
+      activerecord (>= 6.0, < 9.0)
       mysql2 (~> 0.5)
       ptools (~> 1.4)
 

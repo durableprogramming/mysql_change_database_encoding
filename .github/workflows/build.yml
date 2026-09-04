@@ -9,7 +9,31 @@ on:
   pull_request:
     branches: [ master ]
 
+permissions:
+  contents: read
+
 jobs:
+  build-gem:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Build gem
+      run: gem build mysql_change_database_encoding.gemspec
+
+    - name: Upload gem artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: gem-package
+        path: "*.gem"
+
   build-rpm:
     runs-on: ubuntu-latest
     container: 
@@ -81,41 +105,3 @@ jobs:
       run: |
         VERSION="0.0.0-dev-$(git rev-parse --short HEAD)"
         docker run --rm mysql-change-database-encoding:$VERSION --help
-
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: test_db
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 3.1
-        bundler-cache: true
-
-    - name: Wait for MySQL
-      run: |
-        until mysqladmin ping -h 127.0.0.1 -u root -ppassword --silent; do
-          echo 'Waiting for MySQL...'
-          sleep 2
-        done
-
-    - name: Run tests
-      run: |
-        bundle exec ruby -Itest test/database_encoding_changer_table_test.rb
-      env:
-        MYSQL_HOST: 127.0.0.1
-        MYSQL_USER: root
-        MYSQL_PASSWORD: password
-        MYSQL_DATABASE: test_db

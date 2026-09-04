@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Command-line tool logic for changing the character encoding and/or collation
 # of a MySQL database and its tables. Given a set of options (database
 # connection info, target encoding/collation, and behavior flags), this class:
@@ -22,12 +24,12 @@
 # MySQL connection parameters (:host, :port, :user, :password) used to build
 # the DSN passed to pt-online-schema-change.
 
-require 'active_record'
-require 'shellwords'
+require "active_record"
+require "English"
+require "shellwords"
 
 module MysqlChangeDatabaseEncoding
   class DatabaseEncodingChanger
-
     def initialize(opts)
       @conn = opts.delete(:connection)
 
@@ -36,44 +38,24 @@ module MysqlChangeDatabaseEncoding
 
     def run!
       puts "Processing database settings."
-      sql = "ALTER DATABASE "
-      sql << conn.quote_column_name(@options[:database])
+      sql = "ALTER DATABASE #{conn.quote_column_name(@options[:database])}#{encoding_clause}#{collation_clause};"
 
-      if @options[:encoding] 
-        sql << " CHARACTER SET #{@options[:encoding]}"
-      end
-
-      if @options[:collation] 
-        sql << " COLLATE #{@options[:collation]}"
-      end
-      sql << ';'
-
-      ActiveRecord::Migration.say_with_time 'Setting database global settings.' do 
-
+      ActiveRecord::Migration.say_with_time "Setting database global settings." do
         run_sql_directly sql
-
       end
 
       table_list.each do |table|
-
         DatabaseEncodingChangerTable.use_table(table)
 
         verbose_puts "Processing #{table}"
 
-        sql_suffix = '' # This is just the part following ALTER TABLE tablename, which can be passed to pt-online-schema-change.
+        # Just the part following ALTER TABLE tablename, so that it can also be
+        # handed to pt-online-schema-change as its --alter argument.
+        sql_suffix = "#{convert_encoding_clause}#{collation_clause}"
 
-        if @options[:encoding] 
-          sql_suffix << " CONVERT TO CHARACTER SET #{@options[:encoding]}"
-        end
+        use_online_schema_change =  @options[:osc]
 
-        if @options[:collation] 
-          sql_suffix << " COLLATE #{@options[:collation]}"
-        end
-
-
-        use_online_schema_change =  @options[:osc] 
-
-        if use_online_schema_change && !DatabaseEncodingChangerTable.eligible_for_online_schema_change? 
+        if use_online_schema_change && !DatabaseEncodingChangerTable.eligible_for_online_schema_change?
 
           verbose_puts "#{table} is not eligible for online schema change."
           use_online_schema_change = false
@@ -82,35 +64,26 @@ module MysqlChangeDatabaseEncoding
 
         if use_online_schema_change
 
-          verbose_puts "Using online schema change for #{table}" 
+          verbose_puts "Using online schema change for #{table}"
 
           run_sql_through_pt_osc table, sql_suffix
 
         elsif @options[:direct_alter_table]
-          verbose_puts "Using direct ALTER TABLE for #{table}." 
+          verbose_puts "Using direct ALTER TABLE for #{table}."
 
-          full_sql = "ALTER TABLE " # This is the full SQL statement, which is needed to directly run the SQL.
-          full_sql << conn.quote_column_name(table)
-          full_sql << "#{sql_suffix};"
+          # The full statement, needed to run the SQL directly.
+          full_sql = "ALTER TABLE #{conn.quote_column_name(table)}#{sql_suffix};"
 
-          ActiveRecord::Migration.say_with_time 'Migrating without OSC' do 
+          ActiveRecord::Migration.say_with_time "Migrating without OSC" do
+            run_sql_directly full_sql
+          rescue ActiveRecord::StatementInvalid
+            puts "MySQL Error: #{$ERROR_INFO}"
+            puts "Raised during the execution of this SQL statement:"
+            puts full_sql
 
-            begin 
-              run_sql_directly full_sql
-            rescue ActiveRecord::StatementInvalid
+            next if @options[:skip_table_on_error]
 
-              puts "MySQL Error: ${!}"
-              puts "Raise during the execution of this SQL statement:"
-              puts sql
-
-              if @options[:skip_table_on_error]
-                next
-              else
-                raise
-              end
-
-            end
-
+            raise
           end
         else
           puts "Skipping #{table}."
@@ -121,54 +94,56 @@ module MysqlChangeDatabaseEncoding
 
     private
 
+    # The " CHARACTER SET x" fragment of an ALTER DATABASE statement, or an
+    # empty string when no encoding was requested.
+    def encoding_clause
+      @options[:encoding] ? " CHARACTER SET #{@options[:encoding]}" : ""
+    end
+
+    # The ALTER TABLE spelling of the same thing.
+    def convert_encoding_clause
+      @options[:encoding] ? " CONVERT TO CHARACTER SET #{@options[:encoding]}" : ""
+    end
+
+    # The " COLLATE x" fragment shared by both statements, or an empty string
+    # when no collation was requested.
+    def collation_clause
+      @options[:collation] ? " COLLATE #{@options[:collation]}" : ""
+    end
+
     def run_sql_directly(sql)
       puts "Running SQL:"
       puts sql
       conn.execute sql
     end
+
     def run_sql_through_pt_osc(table, sql)
       puts "This SQL will be run using pt-online-schema-change:"
       puts sql
       puts "The following command will be run:"
-      cmd = "pt-online-schema-change --execute "
-      cmd << @options[:osc_options]
-      cmd << " --alter "
-      cmd << Shellwords.escape(sql) 
-      cmd << ' '
-      cmd << Shellwords.escape(pt_dsn(table))
+      cmd = "pt-online-schema-change --execute #{@options[:osc_options]} " \
+            "--alter #{Shellwords.escape(sql)} #{Shellwords.escape(pt_dsn(table))}"
       puts cmd
       system cmd
-
-    
     end
-    def pt_dsn(table)
 
+    def pt_dsn(table)
       options = {
-        'D'=> @options[:database],
-        'h'=> @options[:host],
-        'p'=> @options[:password],
-        'P'=> @options[:port],
-        'u'=> @options[:user],
-        't'=> table
+        "D" => @options[:database],
+        "h" => @options[:host],
+        "p" => @options[:password],
+        "P" => @options[:port],
+        "u" => @options[:user],
+        "t" => table
       }
 
-      dsn_parts = []
-
-      options.each do |k,v|
-        part = k.dup
-        part << '='
-        part << v.gsub('\\', '\\\\').gsub(',','\\,')
-        dsn_parts << part
-      end
-
-      dsn_parts.join(',')
-
+      options.map { |k, v| "#{k}=#{v.gsub("\\", "\\\\").gsub(",", '\\,')}" }.join(",")
     end
 
     def verbose_puts(msg)
-      if @options[:verbose]
-        puts msg
-      end
+      return unless @options[:verbose]
+
+      puts msg
     end
 
     def table_list
@@ -189,7 +164,6 @@ module MysqlChangeDatabaseEncoding
     def conn
       @conn ||= ActiveRecord::Base.connection
     end
-
   end
 end
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class DatabaseEncodingChangerTableTest < Minitest::Test
@@ -39,7 +41,6 @@ class DatabaseEncodingChangerTableTest < Minitest::Test
     refute_includes Model.columns.map(&:name), "id"
     assert_equal false, Model.eligible_for_online_schema_change?
   end
-
 end
 
 # Copyright (c) 2026 Durable Programming, LLC. All rights reserved.

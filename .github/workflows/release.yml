@@ -28,6 +28,29 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    # The gemspec reads lib/mysql_change_database_encoding/version.rb, so a tag
+    # that disagrees with it would produce a package named after a different
+    # version than it contains.
+    - name: Verify the tag matches the version file
+      run: |
+        GEM_VERSION="$(ruby -Ilib -e 'require "mysql_change_database_encoding/version"; print MysqlChangeDatabaseEncoding::VERSION')"
+        if [ "$GEM_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+          echo "Tag ${{ steps.version.outputs.tag }} does not match version.rb ($GEM_VERSION)" >&2
+          exit 1
+        fi
+
+    - name: Build gem
+      run: gem build mysql_change_database_encoding.gemspec
+
+    - name: Generate gem checksum
+      run: sha256sum mysql_change_database_encoding-*.gem > mysql_change_database_encoding-${{ steps.version.outputs.version }}.gem.sha256
+
     # Build RPM
     - name: Build RPM in container
       run: |
@@ -98,6 +121,7 @@ jobs:
           See the commit history for detailed changes in this release.
 
           ## Downloads
+          - **Ruby gem**: mysql_change_database_encoding-${{ steps.version.outputs.version }}.gem
           - **RPM Package**: mysql-change-database-encoding-${{ steps.version.outputs.version }}-1.noarch.rpm
           - **DEB Package**: mysql-change-database-encoding_${{ steps.version.outputs.version }}_all.deb
           - **Docker Image**: `durableprogramming/mysql-change-database-encoding:${{ steps.version.outputs.version }}`
@@ -124,6 +148,8 @@ jobs:
           ## Usage
           See the [README.md](README.md) for detailed usage instructions.
         files: |
+          *.gem
+          *.gem.sha256
           *.rpm
           *.deb
         draft: false
